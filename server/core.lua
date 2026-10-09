@@ -150,19 +150,20 @@ local function flushDb()
         local last = math.min(i + 199, #batch)
         for j = i, last do
             local e = batch[j]
-            ph[#ph + 1] = '(FROM_UNIXTIME(?),?,?,?,?,?,?,?,?,?,?)'
             local a, t = e.actor or {}, e.target or {}
+            -- fehlende Werte als SQL-NULL schreiben (nil wuerde die Parameterliste verschieben)
+            local vals = { e.category, e.level, e.message, a.license, a.name, a.id, t.license, t.name, e.data, e.resource }
+            local row = { 'FROM_UNIXTIME(?)' }
             params[#params + 1] = e.ts
-            params[#params + 1] = e.category
-            params[#params + 1] = e.level
-            params[#params + 1] = e.message
-            params[#params + 1] = a.license
-            params[#params + 1] = a.name
-            params[#params + 1] = a.id
-            params[#params + 1] = t.license
-            params[#params + 1] = t.name
-            params[#params + 1] = e.data
-            params[#params + 1] = e.resource
+            for k = 1, 10 do
+                if vals[k] == nil then
+                    row[#row + 1] = 'NULL'
+                else
+                    row[#row + 1] = '?'
+                    params[#params + 1] = vals[k]
+                end
+            end
+            ph[#ph + 1] = '(' .. table.concat(row, ',') .. ')'
         end
         local res = MySQL.insert.await(
             'INSERT INTO central_logs (created_at, category, level, message, actor_license, actor_name, actor_id, target_license, target_name, data, resource) VALUES '
