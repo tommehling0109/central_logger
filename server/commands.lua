@@ -1,7 +1,16 @@
 -- /logs <kategorie|*> [anzahl] [spieler]   z.B.  /logs money 30 Max   |   /logcats
 -- Berechtigung:  add_ace group.admin command.logs allow  /  add_ace group.admin command.logcats allow
-local function out(src, line)
-    if src == 0 then print(line) else TriggerClientEvent('chat:addMessage', src, { args = { 'LOG', line } }) end
+-- Ausgabe laut Config.OutputMode: 'console' (F8), 'chat' (chat:addMessage), 'legacy' (chatMessage-Event)
+local function emit(src, lines)
+    if src == 0 then
+        for _, l in ipairs(lines) do print(l) end
+    elseif Config.OutputMode == 'chat' then
+        for _, l in ipairs(lines) do TriggerClientEvent('chat:addMessage', src, { color = { 255, 200, 0 }, multiline = true, args = { 'LOG', l } }) end
+    elseif Config.OutputMode == 'legacy' then
+        for _, l in ipairs(lines) do TriggerClientEvent('chatMessage', src, 'LOG', { 255, 200, 0 }, l) end
+    else
+        TriggerClientEvent('central_logger:print', src, lines)
+    end
 end
 
 RegisterCommand('logs', function(src, args)
@@ -16,14 +25,16 @@ RegisterCommand('logs', function(src, args)
     sql = sql .. ' ORDER BY id DESC LIMIT ' .. limit
 
     local rows = MySQL.query.await(sql, params) or {}
-    if #rows == 0 then return out(src, 'Keine Eintraege gefunden.') end
+    if #rows == 0 then return emit(src, { 'Keine Eintraege gefunden.' }) end
+    local lines = {}
     for i = #rows, 1, -1 do
         local r = rows[i]
         local t = type(r.created_at) == 'number' and os.date('%d.%m %H:%M:%S', math.floor(r.created_at / 1000)) or tostring(r.created_at)
-        out(src, ('%s [%s] %s%s: %s'):format(t, r.level, r.category, r.actor_name and (' (' .. r.actor_name .. ')') or '', r.message))
+        lines[#lines + 1] = ('%s [%s] %s%s: %s'):format(t, r.level, r.category, r.actor_name and (' (' .. r.actor_name .. ')') or '', r.message)
     end
+    emit(src, lines)
 end, true)
 
 RegisterCommand('logcats', function(src)
-    out(src, 'Bekannte Kategorien: ' .. table.concat(exports[GetCurrentResourceName()]:GetCategories(), ', '))
+    emit(src, { 'Bekannte Kategorien: ' .. table.concat(exports[GetCurrentResourceName()]:GetCategories(), ', ') })
 end, true)

@@ -2,6 +2,9 @@ Config = {}
 
 Config.ServerName = 'Mein Server'
 
+-- Ausgabe von /logs ingame: 'console' (F8, funktioniert immer), 'chat' (Standard-Chat), 'legacy' (aelteres chatMessage-Event)
+Config.OutputMode = 'console'
+
 -- Webhooks. Leer lassen = Kanal deaktiviert (faellt dann auf "default" zurueck).
 -- Neues Feature "casino"? Einfach hier `casino = 'https://...'` ergaenzen -> alle
 -- Kategorien "casino", "casino.roulette", ... landen automatisch dort.
